@@ -1,0 +1,28 @@
+# Personal typing data (YOUR PRIVATE DATA)
+sessions.json
+profile.json
+*.profile.json
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# OS junk
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+typing_logs/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+
+# Virtual environment
+venv/
+env/
+.venv

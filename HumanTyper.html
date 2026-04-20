@@ -1,0 +1,1436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>HumanTyper Pro</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════ TOKENS ═══════════════════════ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#080808; --s1:#101010; --s2:#181818; --s3:#202020; --s4:#282828;
+  --border:#252525; --border2:#353535;
+  --txt:#ebebeb; --txt2:#999; --txt3:#555;
+  --acc:#dc2626; --acc-d:#b91c1c; --acc-l:#ef4444;
+  --warn:#f97316; --green:#22c55e; --purple:#a78bfa; --blue:#60a5fa;
+  --mono:'JetBrains Mono',monospace; --sans:'Inter',sans-serif;
+  --r:8px; --r-lg:12px; --ease:cubic-bezier(0.4,0,0.2,1);
+  --shadow:0 8px 32px rgba(0,0,0,0.6);
+}
+[data-theme="light"]{
+  --bg:#f2f2f2; --s1:#fff; --s2:#f7f7f7; --s3:#efefef; --s4:#e5e5e5;
+  --border:#e0e0e0; --border2:#ccc;
+  --txt:#111; --txt2:#555; --txt3:#999;
+  --shadow:0 4px 20px rgba(0,0,0,0.09);
+}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;}}
+html{font-size:14px;}
+body{background:var(--bg);color:var(--txt);font-family:var(--sans);min-height:100vh;overflow-x:hidden;transition:background .3s var(--ease),color .3s var(--ease);}
+
+/* ═══════════════════════ HERO ═══════════════════════ */
+#hero{position:fixed;inset:0;z-index:1000;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;transition:opacity .6s var(--ease),transform .6s var(--ease);}
+#hero.exit{opacity:0;transform:scale(1.05);pointer-events:none;}
+
+.hero-title{font-size:clamp(52px,10vw,96px);font-weight:700;letter-spacing:-4px;color:var(--txt);}
+.hero-title .letter{display:inline-block;opacity:0;transform:translateY(36px);animation:letterIn .5s var(--ease) forwards;}
+@keyframes letterIn{to{opacity:1;transform:translateY(0);}}
+
+.hero-sub{font-size:12px;color:var(--txt3);letter-spacing:3px;text-transform:uppercase;opacity:0;animation:fadeUp .5s var(--ease) 1s forwards;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+
+/* hero pill that animates from loading → connected */
+.hero-pill{
+  display:inline-flex;align-items:center;gap:8px;
+  border-radius:999px;padding:8px 20px;margin-top:4px;
+  opacity:0;animation:fadeUp .5s var(--ease) 1.1s forwards;
+  border:1px solid rgba(220,38,38,.3);background:rgba(220,38,38,.06);
+  transition:border-color .5s,background .5s,color .5s;
+}
+.hero-pill.connected{border-color:rgba(34,197,94,.4);background:rgba(34,197,94,.07);}
+.hero-pill-dot{width:8px;height:8px;border-radius:50%;background:var(--acc);animation:pilldot 1.2s ease-in-out infinite;transition:background .5s;}
+.hero-pill.connected .hero-pill-dot{background:var(--green);box-shadow:0 0 8px var(--green);animation:pilldotok 2s ease-in-out infinite;}
+@keyframes pilldot{0%,100%{opacity:.3;transform:scale(.8);}50%{opacity:1;transform:scale(1.2);}}
+@keyframes pilldotok{0%,100%{transform:scale(1);}50%{transform:scale(1.25);}}
+.hero-pill-txt{font-size:11px;color:var(--txt2);letter-spacing:.5px;transition:color .5s;}
+.hero-pill.connected .hero-pill-txt{color:var(--green);}
+
+.hero-btn{
+  margin-top:12px;padding:14px 48px;background:var(--acc);color:#fff;border:none;
+  border-radius:var(--r);font-family:var(--sans);font-size:12px;font-weight:700;
+  letter-spacing:2.5px;cursor:pointer;opacity:0;
+  animation:fadeUp .5s var(--ease) 1.25s forwards,heroPulse 2.5s ease 1.8s infinite;
+  transition:background .15s var(--ease),transform .1s;
+}
+.hero-btn:hover{background:var(--acc-d);transform:scale(1.02);}
+.hero-btn:active{transform:scale(.97);}
+@keyframes heroPulse{0%,100%{box-shadow:0 0 0 0 rgba(220,38,38,0);}50%{box-shadow:0 0 0 12px rgba(220,38,38,.1);}}
+
+/* ═══════════════════════ APP ═══════════════════════ */
+#app{opacity:0;transform:translateY(24px);pointer-events:none;transition:opacity .5s var(--ease) .1s,transform .5s var(--ease) .1s;max-width:1100px;margin:0 auto;padding:26px 26px 80px;}
+#app.visible{opacity:1;transform:translateY(0);pointer-events:auto;}
+
+/* ═══════════════════════ TOPBAR ═══════════════════════ */
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
+.logo{display:flex;align-items:center;gap:10px;}
+.logo-name{font-size:17px;font-weight:700;letter-spacing:-.5px;color:var(--acc);}
+.logo-badge{background:var(--acc);color:#fff;font-size:9px;font-weight:700;padding:2px 7px;border-radius:4px;letter-spacing:1px;text-transform:uppercase;}
+.topbar-right{display:flex;align-items:center;gap:8px;}
+
+/* server pill in topbar */
+.s-pill{display:inline-flex;align-items:center;gap:6px;background:var(--s1);border:1px solid var(--border);border-radius:999px;padding:5px 13px;font-size:11px;color:var(--txt2);transition:all .4s;}
+.s-pill.ok{border-color:rgba(34,197,94,.4);color:var(--green);}
+.s-pill.err{border-color:rgba(220,38,38,.4);color:var(--acc-l);}
+.s-dot{width:7px;height:7px;border-radius:50%;background:var(--txt3);flex-shrink:0;transition:background .4s;}
+.s-pill.ok .s-dot{background:var(--green);box-shadow:0 0 7px var(--green);animation:dotBreath 2s ease-in-out infinite;}
+.s-pill.err .s-dot{background:var(--acc-l);}
+@keyframes dotBreath{0%,100%{transform:scale(1);}50%{transform:scale(1.28);}}
+
+.icon-btn{background:transparent;border:1px solid var(--border);border-radius:var(--r);color:var(--txt2);padding:7px 13px;cursor:pointer;font-size:12px;font-family:var(--sans);font-weight:500;transition:all .15s var(--ease);}
+.icon-btn:hover{color:var(--txt);border-color:var(--border2);background:var(--s1);transform:translateY(-1px);}
+.icon-btn.on{background:var(--acc);border-color:var(--acc);color:#fff;}
+
+/* ═══════════════════════ TABS ═══════════════════════ */
+.tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:26px;overflow-x:auto;}
+.tab{padding:10px 18px;font-size:13px;font-weight:500;color:var(--txt2);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .2s var(--ease),border-color .2s var(--ease);user-select:none;white-space:nowrap;flex-shrink:0;}
+.tab:hover{color:var(--txt);}
+.tab.active{color:var(--acc);border-bottom-color:var(--acc);}
+.page{display:none;}
+.page.active{display:block;animation:pageIn .18s var(--ease);}
+@keyframes pageIn{from{opacity:0;transform:translateY(5px);}to{opacity:1;transform:translateY(0);}}
+
+/* ═══════════════════════ TYPE TAB ═══════════════════════ */
+.type-cols{display:grid;grid-template-columns:1fr 308px;gap:18px;align-items:start;}
+@media(max-width:800px){.type-cols{grid-template-columns:1fr;}}
+
+/* text area with hover toolbar */
+.text-area-wrap{position:relative;}
+.text-area-toolbar{position:absolute;top:10px;right:10px;display:flex;gap:5px;opacity:0;transform:translateY(-4px);pointer-events:none;z-index:10;transition:opacity .2s var(--ease),transform .2s var(--ease);}
+.text-area-wrap:hover .text-area-toolbar{opacity:1;transform:translateY(0);pointer-events:auto;}
+.toolbar-btn{background:var(--s3);border:1px solid var(--border2);border-radius:6px;color:var(--txt2);font-size:11px;font-family:var(--sans);padding:4px 9px;cursor:pointer;transition:all .15s;}
+.toolbar-btn:hover{color:var(--txt);background:var(--s4);transform:translateY(-1px);}
+
+/* custom range slider */
+input[type=range]{-webkit-appearance:none;background:transparent;width:100%;}
+input[type=range]::-webkit-slider-runnable-track{height:4px;background:var(--border2);border-radius:2px;}
+input[type=range]::-webkit-slider-thumb{height:14px;width:14px;border-radius:50%;background:var(--acc);cursor:pointer;-webkit-appearance:none;margin-top:-5px;box-shadow:0 0 8px rgba(220,38,38,.4);transition:transform .15s;}
+input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.2);}
+
+.tbox{width:100%;min-height:380px;background:var(--s1);border:1px solid var(--border);border-radius:var(--r-lg);color:var(--txt);font-family:var(--mono);font-size:13px;line-height:1.75;padding:18px;resize:vertical;outline:none;transition:border-color .2s var(--ease),box-shadow .2s,background .2s;animation:slideUp .4s var(--ease) .2s both;}
+.tbox:focus{border-color:var(--acc);box-shadow:0 0 0 3px rgba(220,38,38,.12);background:var(--s2);}
+@keyframes slideUp{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
+.meta-row{display:flex;gap:12px;margin-top:6px;}
+.meta{font-size:11px;color:var(--txt3);}
+
+/* live preview */
+.preview-box{background:var(--s1);border:1px solid var(--border);border-radius:var(--r-lg);padding:14px 18px;font-family:var(--mono);font-size:13px;line-height:1.75;color:var(--txt2);min-height:60px;margin-top:12px;position:relative;}
+.preview-box.active-typing{border-color:rgba(220,38,38,.3);}
+#previewText{white-space:pre-wrap;word-break:break-word;color:var(--txt);}
+#previewText::after{content:'|';color:var(--acc);animation:blink .7s step-end infinite;font-weight:300;}
+.preview-label{font-size:10px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--txt3);margin-bottom:8px;}
+
+/* paste history */
+.paste-hist-wrap{position:relative;}
+.paste-hist-menu{position:absolute;top:calc(100% + 5px);right:0;background:var(--s1);border:1px solid var(--border2);border-radius:var(--r-lg);min-width:270px;z-index:50;box-shadow:var(--shadow);display:none;}
+.paste-hist-menu.show{display:block;animation:dropIn .15s var(--ease);}
+@keyframes dropIn{from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:translateY(0);}}
+.paste-hist-item{padding:9px 14px;font-size:12px;color:var(--txt2);cursor:pointer;font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:background .1s;}
+.paste-hist-item:hover{background:var(--s2);color:var(--txt);}
+.paste-hist-item:first-child{border-radius:var(--r-lg) var(--r-lg) 0 0;}
+.paste-hist-item:last-child{border-radius:0 0 var(--r-lg) var(--r-lg);}
+
+/* RIGHT CONTROL PANEL */
+.ctrl-panel{display:flex;flex-direction:column;gap:13px;animation:slideUp .4s var(--ease) .3s both;}
+.panel-card{background:var(--s1);border:1px solid var(--border);border-radius:var(--r-lg);padding:15px;}
+.panel-label{font-size:11px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--txt3);margin-bottom:10px;}
+.pill-row{display:flex;flex-wrap:wrap;gap:6px;}
+.pill{background:var(--s2);border:1px solid var(--border);color:var(--txt2);font-size:11px;font-family:var(--sans);font-weight:500;padding:5px 12px;border-radius:999px;cursor:pointer;transition:all .15s var(--ease);}
+.pill:hover{border-color:var(--border2);color:var(--txt);transform:translateY(-1px);}
+.pill.on{background:rgba(220,38,38,.12);border-color:var(--acc);color:var(--acc);}
+.pill:active{transform:scale(.97);}
+
+.toggle-row{display:flex;align-items:center;justify-content:space-between;margin-top:12px;}
+.toggle-row label{font-size:12px;color:var(--txt2);}
+.toggle{position:relative;width:36px;height:20px;flex-shrink:0;}
+.toggle input{opacity:0;width:0;height:0;}
+.slider-t{position:absolute;inset:0;background:var(--border2);border-radius:999px;cursor:pointer;transition:background .2s;}
+.slider-t:before{content:'';position:absolute;width:14px;height:14px;left:3px;top:3px;background:#fff;border-radius:50%;transition:transform .2s var(--ease);}
+.toggle input:checked+.slider-t{background:var(--acc);}
+.toggle input:checked+.slider-t:before{transform:translateX(16px);}
+
+/* profile banner */
+.profile-banner{background:rgba(220,38,38,.07);border:1px solid rgba(220,38,38,.25);border-radius:var(--r);padding:10px 14px;display:none;}
+.profile-banner.show{display:block;animation:fadeUp .3s var(--ease);}
+.profile-banner h4{font-size:11px;font-weight:600;color:var(--acc-l);margin-bottom:4px;}
+.profile-banner-stats{font-size:11px;color:var(--txt2);}
+
+/* stats grid */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;}
+.stat{background:var(--s2);border-radius:var(--r);padding:10px 5px;text-align:center;opacity:0;animation:statIn .4s var(--ease) forwards;position:relative;cursor:default;transition:background .15s;}
+.stat:hover{background:var(--s3);}
+.stat:nth-child(1){animation-delay:.4s;}
+.stat:nth-child(2){animation-delay:.5s;}
+.stat:nth-child(3){animation-delay:.6s;}
+.stat:nth-child(4){animation-delay:.7s;}
+@keyframes statIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+.stat .sv{font-family:var(--mono);font-size:18px;font-weight:500;color:var(--txt);}
+.stat .sl{font-size:9px;color:var(--txt3);margin-top:2px;text-transform:uppercase;letter-spacing:1px;}
+
+/* sparkline tooltip */
+.sparkline-wrap{position:absolute;bottom:calc(100%+8px);left:50%;transform:translateX(-50%);background:var(--s1);border:1px solid var(--border2);border-radius:var(--r-lg);padding:10px 12px;width:160px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:30;box-shadow:var(--shadow);}
+.stat:first-child:hover .sparkline-wrap{opacity:1;}
+.sparkline-label{font-size:10px;color:var(--txt3);text-align:center;margin-top:4px;}
+
+/* progress */
+.prog-wrap{background:var(--s2);border-radius:999px;height:4px;overflow:hidden;}
+.prog-bar{height:100%;background:linear-gradient(90deg,var(--acc-d),var(--acc-l));border-radius:999px;width:0%;transition:width .5s var(--ease);}
+.status-line{font-size:12px;color:var(--acc);font-weight:500;min-height:16px;transition:color .3s;}
+.status-line.ok{color:var(--green);}
+.status-line.dim{color:var(--txt3);}
+.status-line.warn{color:var(--warn);}
+.status-line.err{color:var(--acc-l);}
+
+/* MODE SYSTEM */
+.mode-row{display:flex;gap:6px;flex-wrap:wrap;}
+.mode-pill{background:var(--s2);border:1px solid var(--border);color:var(--txt2);font-size:11px;font-family:var(--sans);font-weight:500;padding:5px 12px;border-radius:999px;cursor:pointer;transition:all .15s;}
+.mode-pill:hover{border-color:var(--border2);color:var(--txt);}
+.mode-pill.on{background:rgba(220,38,38,.12);border-color:var(--acc);color:var(--acc);}
+
+/* START / STOP — clean, no dropdown */
+.action-wrap{display:flex;flex-direction:column;gap:8px;}
+.start-btn{
+  width:100%;padding:14px;background:var(--acc);color:#fff;border:none;
+  border-radius:var(--r-lg);font-family:var(--sans);font-size:14px;font-weight:700;
+  letter-spacing:1px;cursor:pointer;
+  transition:background .15s var(--ease),transform .1s,box-shadow .2s;
+  position:relative;overflow:hidden;
+}
+.start-btn::after{content:'';position:absolute;inset:0;background:rgba(255,255,255,.1);opacity:0;transition:opacity .15s;}
+.start-btn:hover{background:var(--acc-d);box-shadow:0 8px 24px rgba(220,38,38,.4);}
+.start-btn:hover::after{opacity:1;}
+.start-btn:active{transform:scale(.97);}
+.start-btn:disabled{background:var(--s3);color:var(--txt3);cursor:not-allowed;box-shadow:none;}
+.sub-btns{display:flex;gap:7px;}
+.sub-btn{flex:1;padding:8px;background:transparent;border-radius:var(--r);font-family:var(--sans);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;}
+.sub-btn:active{transform:scale(.97);}
+.btn-pause{border:1px solid var(--warn);color:var(--warn);display:none;}
+.btn-pause:hover{background:rgba(249,115,22,.1);}
+.btn-pause.show{display:block;}
+.btn-stop{border:1px solid var(--acc);color:var(--acc-l);display:none;}
+.btn-stop:hover{background:rgba(220,38,38,.1);}
+.btn-stop.show{display:block;}
+.btn-skip{border:1px solid var(--border);color:var(--txt2);display:none;}
+.btn-skip:hover{border-color:var(--border2);color:var(--txt);}
+.btn-skip.show{display:block;}
+.btn-hint{font-size:10px;color:var(--txt3);text-align:center;}
+
+/* ═══════════════════════ COUNTDOWN ═══════════════════════ */
+#overlay{position:fixed;inset:0;background:rgba(5,5,5,.97);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:500;gap:14px;backdrop-filter:blur(6px);}
+#overlay.show{display:flex;}
+.cnt-n{font-size:130px;font-weight:700;color:var(--acc);font-family:var(--mono);line-height:1;animation:cntPulse 1s ease-in-out infinite;}
+@keyframes cntPulse{0%,100%{transform:scale(1);}50%{transform:scale(1.07);}}
+.cnt-msg{font-size:15px;color:var(--txt2);}
+.cnt-sub{font-size:12px;color:var(--txt3);}
+.cnt-cancel{margin-top:18px;background:transparent;border:1px solid var(--border2);border-radius:var(--r);color:var(--txt2);font-family:var(--sans);font-size:12px;padding:8px 22px;cursor:pointer;transition:color .15s,border-color .15s;}
+.cnt-cancel:hover{color:var(--txt);border-color:var(--txt3);}
+
+/* ═══════════════════════ HUMANITY CANVAS ═══════════════════════ */
+.humanity-card{background:var(--s1);border:1px solid var(--border);border-radius:var(--r-lg);padding:14px;margin-top:12px;}
+.humanity-card canvas{display:block;border-radius:5px;background:var(--s2);}
+.humanity-row{display:flex;align-items:baseline;gap:8px;margin-top:8px;}
+.humanity-num{font-family:var(--mono);font-size:22px;font-weight:600;color:var(--acc);}
+.humanity-sub{font-size:11px;color:var(--txt3);}
+
+/* ═══════════════════════ ANALYZER ═══════════════════════ */
+.ana-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:20px;}
+.astat{background:var(--s1);border:1px solid var(--border);border-radius:var(--r-lg);padding:14px;text-align:center;}
+.astat .asv{font-family:var(--mono);font-size:26px;font-weight:600;}
+.astat .asv.g{color:var(--green);}
+.astat .asv.r{color:var(--acc-l);}
+.astat .asv.y{color:var(--warn);}
+.astat .asv.p{color:var(--purple);}
+.astat .asl{font-size:10px;color:var(--txt3);margin-top:3px;text-transform:uppercase;letter-spacing:1px;}
+.ref-box{background:var(--s1);border:1px solid var(--border);border-radius:var(--r-lg);padding:18px;font-family:var(--mono);font-size:14px;line-height:1.85;word-break:break-word;white-space:pre-wrap;min-height:60px;cursor:text;margin-bottom:6px;}
+.rc{display:inline;}
+.rc.cor{color:#86efac;background:rgba(34,197,94,.1);border-radius:2px;}
+.rc.inc{color:#fca5a5;background:rgba(220,38,38,.1);text-decoration:underline;text-decoration-color:var(--acc);border-radius:2px;}
+.rc.pen{color:var(--txt3);}
+.rc.cur{border-left:2px solid var(--acc);animation:blink .65s step-end infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:0;}}
+.extra-warn{font-size:11px;color:#fb923c;background:rgba(67,20,7,.5);display:inline-block;padding:2px 10px;border-radius:999px;margin-bottom:6px;}
+.char-ct{font-size:11px;color:var(--txt3);text-align:right;margin-bottom:12px;}
+.diff-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;}
+.diff-btn{background:var(--s1);border:1px solid var(--border);color:var(--txt2);font-size:11px;font-family:var(--sans);padding:5px 12px;border-radius:999px;cursor:pointer;transition:all .15s;}
+.diff-btn:hover{color:var(--txt);border-color:var(--border2);transform:translateY(-1px);}
+.diff-btn.on{background:rgba(220,38,38,.1);border-color:var(--acc);color:var(--acc);}
+.ana-input{width:100%;background:var(--s1);border:1px solid var(--border);border-radius:var(--r-lg);color:var(--txt);font-family:var(--mono);font-size:13px;line-height:1.7;padding:14px;resize:none;outline:none;transition:border-color .2s,box-shadow .2s;}
+.ana-input:focus{border-color:var(--acc);box-shadow:0 0 0 3px rgba(220,38,38,.1);}
+.hist-item{display:flex;align-items:center;gap:8px;background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:9px 13px;margin-top:6px;font-size:12px;transition:border-color .15s;}
+.hist-item:hover{border-color:var(--border2);}
+.hw{color:var(--green);font-family:var(--mono);font-weight:600;min-width:60px;}
+.ha{color:var(--warn);font-family:var(--mono);min-width:52px;}
+.hm{color:#fca5a5;font-family:var(--mono);min-width:42px;}
+.hcons{color:var(--purple);font-family:var(--mono);min-width:46px;}
+.hdiff{font-size:10px;color:var(--txt3);padding:2px 6px;background:var(--s2);border-radius:4px;}
+.htime{font-size:10px;color:var(--txt3);margin-left:auto;}
+.hdel{background:transparent;border:none;color:var(--txt3);cursor:pointer;font-size:13px;padding:0 2px;transition:color .15s;}
+.hdel:hover{color:var(--acc-l);}
+#profileProgress{background:var(--s1);border:1px solid var(--border);border-radius:var(--r-lg);padding:16px;margin-top:16px;display:none;}
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;color:var(--txt3);gap:8px;text-align:center;}
+.empty-state p{font-size:13px;}
+
+/* ═══════════════════════ AI WRITE ═══════════════════════ */
+.ai-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+@media(max-width:660px){.ai-grid{grid-template-columns:1fr;}}
+.ai-card{background:var(--s1);border:1px solid var(--border);border-radius:var(--r-lg);padding:20px;display:flex;flex-direction:column;gap:12px;}
+.ai-card h3{font-size:13px;font-weight:600;color:var(--txt2);}
+.inp{width:100%;background:var(--s2);border:1px solid var(--border);border-radius:var(--r);color:var(--txt);font-family:var(--sans);font-size:13px;padding:10px 12px;outline:none;transition:border-color .2s,box-shadow .2s;}
+.inp:focus{border-color:var(--acc);box-shadow:0 0 0 3px rgba(220,38,38,.1);}
+.ai-mode-tabs{display:flex;gap:6px;}
+.ai-mode-btn{background:var(--s2);border:1px solid var(--border);color:var(--txt2);font-size:11px;font-family:var(--sans);padding:5px 12px;border-radius:999px;cursor:pointer;transition:all .15s;}
+.ai-mode-btn.on{background:rgba(220,38,38,.12);border-color:var(--acc);color:var(--acc);}
+.btn-acc{background:var(--acc);color:#fff;border:none;border-radius:var(--r);font-family:var(--sans);font-size:12px;font-weight:600;padding:9px 18px;cursor:pointer;transition:background .15s,transform .1s;}
+.btn-acc:hover{background:var(--acc-d);}
+.btn-acc:active{transform:scale(.97);}
+.btn-acc:disabled{background:var(--s3);color:var(--txt3);cursor:not-allowed;}
+.btn-out{background:transparent;border:1px solid var(--border);color:var(--txt2);border-radius:var(--r);font-family:var(--sans);font-size:12px;font-weight:500;padding:9px 16px;cursor:pointer;transition:all .15s;}
+.btn-out:hover{border-color:var(--acc);color:var(--acc);transform:translateY(-1px);}
+.ollama-note{font-size:11px;color:var(--txt3);background:var(--s2);border-radius:var(--r);padding:10px 12px;line-height:1.65;}
+.ollama-note code{font-family:var(--mono);color:var(--acc-l);font-size:11px;}
+.ollama-note a{color:var(--acc-l);text-decoration:none;}
+
+/* ═══════════════════════ HELP ═══════════════════════ */
+.help-cols{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+@media(max-width:660px){.help-cols{grid-template-columns:1fr;}}
+.help-card{background:var(--s1);border:1px solid var(--border);border-radius:var(--r-lg);padding:20px;}
+.help-card h3{font-size:13px;font-weight:600;color:var(--acc);margin-bottom:12px;}
+.help-card p,.help-card li{font-size:13px;color:var(--txt2);line-height:1.65;margin-bottom:6px;}
+.help-card ul{padding-left:16px;}
+.help-card code{font-family:var(--mono);background:var(--s2);padding:1px 5px;border-radius:4px;font-size:12px;color:var(--acc-l);}
+.faq-q{font-size:13px;font-weight:500;color:var(--txt);cursor:pointer;padding:7px 0;border-bottom:1px solid var(--border);transition:color .15s;}
+.faq-q:hover{color:var(--acc);}
+.faq-a{font-size:12px;color:var(--txt2);line-height:1.6;padding:8px 0 4px;display:none;}
+.faq-a.open{display:block;}
+.chat-wrap{background:var(--s1);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;}
+.chat-msgs{height:260px;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;}
+.chat-msgs::-webkit-scrollbar{width:4px;}
+.chat-msgs::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+.msg{max-width:88%;padding:10px 13px;border-radius:12px;font-size:13px;line-height:1.55;}
+.msg.user{background:rgba(220,38,38,.1);border:1px solid rgba(220,38,38,.25);color:var(--txt);align-self:flex-end;border-radius:12px 12px 4px 12px;}
+.msg.ai{background:var(--s2);border:1px solid var(--border);color:var(--txt2);align-self:flex-start;border-radius:12px 12px 12px 4px;}
+.msg.thinking{opacity:.55;font-style:italic;}
+.chat-footer{display:flex;gap:8px;padding:10px;border-top:1px solid var(--border);}
+.chat-inp{flex:1;background:var(--s2);border:1px solid var(--border);border-radius:var(--r);color:var(--txt);font-family:var(--sans);font-size:13px;padding:9px 12px;outline:none;transition:border-color .2s;}
+.chat-inp:focus{border-color:var(--acc);}
+.chat-send{background:var(--acc);color:#fff;border:none;border-radius:var(--r);padding:9px 16px;cursor:pointer;font-family:var(--sans);font-size:12px;font-weight:600;transition:background .15s;}
+.chat-send:hover{background:var(--acc-d);}
+.chat-send:disabled{background:var(--s3);color:var(--txt3);cursor:not-allowed;}
+
+/* ═══════════════════════ SETTINGS ═══════════════════════ */
+.set-accordion{margin-bottom:6px;}
+.set-hdr{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;background:var(--s1);border:1px solid var(--border);border-radius:var(--r-lg);cursor:pointer;transition:background .15s;user-select:none;}
+.set-hdr:hover{background:var(--s2);}
+.set-hdr h3{font-size:13px;font-weight:600;}
+.set-hdr .arr{color:var(--txt3);font-size:12px;transition:transform .2s var(--ease);}
+.set-hdr.open .arr{transform:rotate(180deg);}
+.set-body{display:none;background:var(--s2);border:1px solid var(--border);border-top:none;border-radius:0 0 var(--r-lg) var(--r-lg);padding:16px;}
+.set-body.open{display:block;}
+.set-row{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border);}
+.set-row:last-child{border-bottom:none;padding-bottom:0;}
+.set-row-left label{font-size:13px;color:var(--txt2);display:block;}
+.set-row-left .hint{font-size:11px;color:var(--txt3);margin-top:2px;}
+.range-wrap{width:140px;}
+.range-val{font-size:11px;color:var(--txt3);text-align:right;margin-top:3px;}
+.code-block{background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:12px;font-family:var(--mono);font-size:12px;color:var(--txt2);line-height:1.65;margin:8px 0;}
+.dl-btn{background:var(--s1);border:1px solid var(--border);color:var(--txt2);font-size:12px;font-family:var(--sans);padding:7px 14px;border-radius:var(--r);cursor:pointer;transition:all .15s;}
+.dl-btn:hover{border-color:var(--acc);color:var(--acc);transform:translateY(-1px);}
+
+/* shortcuts grid */
+.shortcuts-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px;}
+.sc-item{display:flex;justify-content:space-between;align-items:center;padding:7px 10px;background:var(--s1);border:1px solid var(--border);border-radius:var(--r);}
+.sc-key{font-family:var(--mono);background:var(--s3);padding:2px 8px;border-radius:4px;font-size:11px;color:var(--acc-l);white-space:nowrap;}
+.sc-desc{font-size:12px;color:var(--txt2);}
+
+/* profile cards */
+.profile-grid-sm{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;}
+.psc{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:10px;}
+.psc .plabel{font-size:10px;color:var(--txt3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;}
+.psc .pval{font-family:var(--mono);font-size:16px;font-weight:600;color:var(--txt);}
+
+/* shared */
+.sl{font-size:11px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--txt3);margin-bottom:8px;margin-top:20px;}
+.sl:first-child{margin-top:0;}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.spacer{height:8px;}
+::-webkit-scrollbar{width:5px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+
+/* focus mode */
+body.focus-mode .topbar,.focus-mode .tabs{opacity:.1;pointer-events:none;transition:opacity .4s;}
+body.focus-mode .tbox{min-height:75vh;}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════
+     HERO
+══════════════════════════════════════════════════════ -->
+<div id="hero">
+  <div class="hero-title" id="heroTitle"></div>
+  <p class="hero-sub">realistic typing &nbsp;·&nbsp; personal profile &nbsp;·&nbsp; AI assist</p>
+
+  <!-- pill that animates: checking → online/offline -->
+  <div class="hero-pill" id="heroPill">
+    <div class="hero-pill-dot"></div>
+    <span class="hero-pill-txt" id="heroPillTxt">Checking server…</span>
+  </div>
+
+  <button class="hero-btn" onclick="enterStudio()">ENTER STUDIO</button>
+</div>
+
+<!-- COUNTDOWN -->
+<div id="overlay">
+  <div class="cnt-n" id="cnt-n">5</div>
+  <div class="cnt-msg">Switch to your target window now</div>
+  <div class="cnt-sub">Typing begins automatically</div>
+  <button class="cnt-cancel" onclick="cancelCnt()">Cancel</button>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     MAIN APP
+══════════════════════════════════════════════════════ -->
+<div id="app">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="logo">
+      <span class="logo-name">HumanTyper</span>
+      <span class="logo-badge">Pro</span>
+    </div>
+    <div class="topbar-right">
+      <div class="s-pill" id="pill"><span class="s-dot"></span><span id="pill-txt">Checking…</span></div>
+      <button class="icon-btn" onclick="toggleTheme()" id="themeBtn">Light</button>
+      <button class="icon-btn" onclick="toggleFocus()" id="focusBtn">Focus</button>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <div class="tab active" onclick="tab(0)">Type</div>
+    <div class="tab" onclick="tab(1)">Analyzer</div>
+    <div class="tab" onclick="tab(2)">AI Write</div>
+    <div class="tab" onclick="tab(3)">Help</div>
+    <div class="tab" onclick="tab(4)">Settings</div>
+  </div>
+
+  <!-- ══ TYPE TAB ══ -->
+  <div class="page active" id="pg0">
+    <div class="type-cols">
+
+      <!-- LEFT -->
+      <div>
+        <div class="text-area-wrap">
+          <div class="text-area-toolbar">
+            <label class="toolbar-btn" for="fileIn">Import</label>
+            <input type="file" id="fileIn" accept=".txt,.md" style="display:none;">
+            <div class="paste-hist-wrap">
+              <button class="toolbar-btn" onclick="togglePasteHist(event)">History</button>
+              <div class="paste-hist-menu" id="pasteHistMenu"></div>
+            </div>
+            <button class="toolbar-btn" onclick="clearText()">Clear</button>
+            <button class="toolbar-btn" onclick="sendToAnalyzerFromToolbar()">Analyzer</button>
+          </div>
+          <textarea class="tbox" id="tbox" placeholder="Paste text here, or use Import to load a .txt file…" rows="15"></textarea>
+        </div>
+        <div class="meta-row">
+          <span class="meta" id="char-meta">0 chars</span>
+          <span class="meta" id="est-meta"></span>
+        </div>
+
+        <!-- LIVE PREVIEW -->
+        <div class="preview-box" id="previewBox">
+          <div class="preview-label">Live Preview</div>
+          <div id="previewText"></div>
+        </div>
+
+        <!-- HUMANITY SCORE -->
+        <div class="humanity-card">
+          <div class="sl" style="margin-top:0;">Humanity Score</div>
+          <canvas id="humanityCanvas" width="580" height="56" style="width:100%;"></canvas>
+          <div class="humanity-row">
+            <span class="humanity-num" id="humanityScore">—</span>
+            <span class="humanity-sub">/ 100 — IKI rhythm variance score</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT -->
+      <div class="ctrl-panel">
+
+        <div class="profile-banner" id="profileBanner">
+          <h4>Personal Profile Active</h4>
+          <div class="profile-banner-stats" id="profileBannerStats"></div>
+        </div>
+
+        <!-- MODE SYSTEM -->
+        <div class="panel-card">
+          <div class="panel-label">Mode</div>
+          <div class="mode-row" id="mode-btns">
+            <button class="mode-pill" onclick="setMode(this,'human')">Human</button>
+            <button class="mode-pill on" onclick="setMode(this,'normal')">Normal</button>
+            <button class="mode-pill" onclick="setMode(this,'fast')">Fast</button>
+            <button class="mode-pill" onclick="setMode(this,'precise')">Precise</button>
+          </div>
+        </div>
+
+        <!-- Speed -->
+        <div class="panel-card">
+          <div class="panel-label">Speed</div>
+          <div class="pill-row" id="speed-pills">
+            <button class="pill" onclick="setSpeed(this,'slow')">Slow</button>
+            <button class="pill on" onclick="setSpeed(this,'normal')">Normal</button>
+            <button class="pill" onclick="setSpeed(this,'fast')">Fast</button>
+            <button class="pill" onclick="setSpeed(this,'expert')">Expert</button>
+          </div>
+        </div>
+
+        <!-- Delay + Realism -->
+        <div class="panel-card">
+          <div class="panel-label">Delay</div>
+          <div class="pill-row" id="delay-pills">
+            <button class="pill" onclick="setDelay(this,3)">3s</button>
+            <button class="pill on" onclick="setDelay(this,5)">5s</button>
+            <button class="pill" onclick="setDelay(this,8)">8s</button>
+            <button class="pill" onclick="setDelay(this,10)">10s</button>
+          </div>
+          <div class="panel-label" style="margin-top:14px;">Realism</div>
+          <div class="pill-row" id="realism-pills">
+            <button class="pill" onclick="setRealism(this,'low')">Low</button>
+            <button class="pill on" onclick="setRealism(this,'medium')">Medium</button>
+            <button class="pill" onclick="setRealism(this,'high')">High</button>
+          </div>
+          <div class="toggle-row">
+            <label>Use Personal Profile</label>
+            <label class="toggle"><input type="checkbox" id="profileToggle" onchange="toggleProfileMode()"><span class="slider-t"></span></label>
+          </div>
+        </div>
+
+        <!-- Live Stats -->
+        <div class="panel-card">
+          <div class="panel-label">Live stats</div>
+          <div class="stats-grid">
+            <div class="stat">
+              <div class="sv" id="s-wpm">—</div><div class="sl">WPM</div>
+              <div class="sparkline-wrap">
+                <canvas id="sparkCanvas" width="136" height="40"></canvas>
+                <div class="sparkline-label">WPM over session</div>
+              </div>
+            </div>
+            <div class="stat"><div class="sv" id="s-chars">0</div><div class="sl">Chars</div></div>
+            <div class="stat"><div class="sv" id="s-typos">0</div><div class="sl">Typos</div></div>
+            <div class="stat"><div class="sv" id="s-fixed">0</div><div class="sl">Fixed</div></div>
+          </div>
+          <div class="spacer"></div>
+          <div class="prog-wrap"><div class="prog-bar" id="prog"></div></div>
+          <div class="spacer"></div>
+          <div class="status-line dim" id="status-txt">Ready</div>
+        </div>
+
+        <!-- ACTION BUTTONS — clean no dropdown -->
+        <div class="action-wrap">
+          <button class="start-btn" id="btn-start" onclick="startTyping()">START</button>
+          <div class="sub-btns">
+            <button class="sub-btn btn-pause" id="btn-pause" onclick="pauseTyping()">PAUSE</button>
+            <button class="sub-btn btn-stop"  id="btn-stop"  onclick="stopTyping()">STOP</button>
+            <button class="sub-btn btn-skip"  id="btn-skip"  onclick="skipSentence()">SKIP</button>
+          </div>
+          <p class="btn-hint">See Settings → Shortcuts for keyboard controls</p>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ ANALYZER TAB ══ -->
+  <div class="page" id="pg1">
+    <div class="ana-stats">
+      <div class="astat"><div class="asv g" id="a-wpm">0</div><div class="asl">WPM</div></div>
+      <div class="astat"><div class="asv r" id="a-mis">0</div><div class="asl">Mistakes</div></div>
+      <div class="astat"><div class="asv y" id="a-acc">100%</div><div class="asl">Accuracy</div></div>
+      <div class="astat"><div class="asv p" id="a-con">—</div><div class="asl">Consistency</div></div>
+    </div>
+    <div class="diff-row">
+      <button class="diff-btn on" onclick="setDiff(this,'easy')">Easy</button>
+      <button class="diff-btn" onclick="setDiff(this,'medium')">Medium</button>
+      <button class="diff-btn" onclick="setDiff(this,'hard')">Hard</button>
+      <button class="diff-btn" style="margin-left:4px;" onclick="loadNewQuote()">New quote</button>
+      <button class="diff-btn" onclick="resetAnalyzer()">Reset</button>
+      <button class="diff-btn" onclick="useTyperText()">From Type tab</button>
+    </div>
+    <div class="sl">Reference text</div>
+    <div class="ref-box" id="refBox" onclick="document.getElementById('ana-input').focus()"></div>
+    <div id="extra-warn" class="extra-warn" style="display:none;"></div>
+    <div class="char-ct" id="char-ct">0 / 0</div>
+    <div class="sl">Type here</div>
+    <textarea class="ana-input" id="ana-input" rows="3" placeholder="Start typing — timer begins on first keystroke…"></textarea>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:20px;">
+      <div class="sl" style="margin:0;">History</div>
+      <button class="diff-btn" onclick="clearHistory()">Clear all</button>
+    </div>
+    <div id="hist-list" style="margin-top:8px;"></div>
+    <div id="profileProgress">
+      <div style="font-size:12px;font-weight:600;color:var(--txt2);margin-bottom:6px;">Personal Profile Progress</div>
+      <div style="font-size:12px;color:var(--txt3);" id="profileProgressTxt"></div>
+      <div class="prog-wrap" style="margin:8px 0;"><div class="prog-bar" id="profileProgBar" style="background:linear-gradient(90deg,var(--purple),var(--blue));"></div></div>
+      <button class="diff-btn" id="genProfileBtn" onclick="generateProfile()" style="display:none;border-color:var(--purple);color:var(--purple);">Generate My Profile</button>
+    </div>
+  </div>
+
+  <!-- ══ AI WRITE TAB ══ -->
+  <div class="page" id="pg2">
+    <p style="font-size:13px;color:var(--txt2);margin-bottom:16px;">Generate text with AI — Ollama (free, local) or Claude API — then send to the typer.</p>
+    <div class="ai-mode-tabs" style="margin-bottom:16px;">
+      <button class="ai-mode-btn on" id="modeOllama" onclick="setAiMode('ollama')">Ollama (free · local)</button>
+      <button class="ai-mode-btn" id="modeClaude" onclick="setAiMode('claude')">Claude API</button>
+    </div>
+    <div class="ai-grid">
+      <div class="ai-card">
+        <h3>Configuration</h3>
+        <div id="ollamaPanel">
+          <div class="sl">Ollama model</div>
+          <input class="inp" type="text" id="ollama-model" value="llama3.2:3b" placeholder="e.g. llama3.2:3b, mistral, phi3">
+          <div class="ollama-note">
+            <strong>Free setup:</strong><br>
+            1. Install from <a href="https://ollama.com" target="_blank">ollama.com</a><br>
+            2. <code>ollama pull llama3.2:3b</code><br>
+            3. <code>OLLAMA_ORIGINS="*" ollama serve</code><br><br>
+            <strong>CORS fix (macOS):</strong><br>
+            <code>launchctl setenv OLLAMA_ORIGINS "*" &amp;&amp; pkill Ollama; open -a Ollama</code><br><br>
+            Models: <code>llama3.2:3b</code> ~2GB · <code>mistral</code> ~4GB · <code>phi3</code> ~1GB
+          </div>
+        </div>
+        <div id="claudePanel" style="display:none;">
+          <div class="sl">Claude API key</div>
+          <input class="inp" type="password" id="ai-key" placeholder="sk-ant-…" style="font-family:var(--sans);">
+          <p style="font-size:11px;color:var(--txt3);">Get one at <a href="https://console.anthropic.com" target="_blank" style="color:var(--acc-l);text-decoration:none;">console.anthropic.com</a></p>
+        </div>
+        <div class="sl">Prompt</div>
+        <textarea class="tbox" id="ai-prompt" rows="5" style="min-height:100px;" placeholder="e.g. Write a 2-paragraph essay about climate change in a casual student voice…"></textarea>
+        <div class="row">
+          <button class="btn-acc" id="btn-gen" onclick="runAI()">Generate</button>
+          <span style="font-size:12px;color:var(--txt3);" id="ai-spin"></span>
+        </div>
+      </div>
+      <div class="ai-card">
+        <h3>Output</h3>
+        <div id="ai-out-empty" class="empty-state"><p>Generated text appears here</p></div>
+        <textarea class="tbox" id="ai-out" rows="10" style="min-height:220px;display:none;" readonly></textarea>
+        <div class="row" style="gap:8px;">
+          <button class="btn-out" onclick="sendToTyper()">Send to Typer</button>
+          <button class="btn-out" onclick="sendToAnalyzer()">Send to Analyzer</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ HELP TAB ══ -->
+  <div class="page" id="pg3">
+    <div class="help-cols">
+      <div>
+        <div class="help-card" style="margin-bottom:12px;">
+          <h3>Quick Start</h3>
+          <ul>
+            <li>Run <code>python3 typer_server.py</code> in Terminal — leave it open</li>
+            <li>Open <code>HumanTyper.html</code> in Chrome</li>
+            <li>The pill in the top bar turns green when connected</li>
+            <li>Paste text → pick speed → click START</li>
+            <li>Switch to your target app before countdown ends</li>
+          </ul>
+        </div>
+        <div class="help-card" style="margin-bottom:12px;">
+          <h3>Ollama CORS Fix</h3>
+          <p>If chat says "Load failed", Ollama needs CORS permission.</p>
+          <p><strong>macOS:</strong></p>
+          <p><code>launchctl setenv OLLAMA_ORIGINS "*" &amp;&amp; pkill Ollama; open -a Ollama</code></p>
+          <p style="margin-top:8px;"><strong>Windows:</strong> Quit Ollama, then in cmd:</p>
+          <p><code>set OLLAMA_ORIGINS=* &amp;&amp; ollama serve</code></p>
+          <p style="margin-top:8px;"><strong>Linux:</strong></p>
+          <p><code>OLLAMA_ORIGINS="*" ollama serve</code></p>
+        </div>
+        <div class="help-card">
+          <h3>FAQ</h3>
+          <div class="faq-q" onclick="toggleFaq(this)">▸ Server pill stays red?</div>
+          <div class="faq-a">Run <code>pip3 install pyautogui</code> then <code>python3 typer_server.py</code>. Leave Terminal open.</div>
+          <div class="faq-q" onclick="toggleFaq(this)">▸ Nothing typed into my app?</div>
+          <div class="faq-a">Click inside your target app before the countdown hits zero.</div>
+          <div class="faq-q" onclick="toggleFaq(this)">▸ Mac permissions popup?</div>
+          <div class="faq-a">System Settings → Privacy → Accessibility → enable Terminal.</div>
+          <div class="faq-q" onclick="toggleFaq(this)">▸ Ollama chat says "Load failed"?</div>
+          <div class="faq-a">See the Ollama CORS Fix section on this page. You need to set OLLAMA_ORIGINS and restart Ollama.</div>
+          <div class="faq-q" onclick="toggleFaq(this)">▸ Personal Profile?</div>
+          <div class="faq-a">Complete 5 Analyzer sessions. The profile learns your WPM, timing, and error rate. Toggle it in the Type tab.</div>
+        </div>
+      </div>
+      <div>
+        <div class="chat-wrap" style="margin-bottom:8px;">
+          <div class="chat-msgs" id="chat-msgs">
+            <div class="msg ai">Hi — ask me anything about setting up HumanTyper, fixing errors, or using features.</div>
+          </div>
+          <div class="chat-footer">
+            <input class="chat-inp" id="chat-inp" placeholder="Ask about setup, Ollama, errors…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat();}">
+            <button class="chat-send" id="chat-send-btn" onclick="sendChat()">Send</button>
+          </div>
+        </div>
+        <p style="font-size:11px;color:var(--txt3);">Uses Ollama or Claude API (set in AI Write tab). Focused on HumanTyper topics only.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SETTINGS TAB ══ -->
+  <div class="page" id="pg4">
+
+    <div class="set-accordion">
+      <div class="set-hdr open" onclick="toggleSet(this)"><h3>Setup & Backend</h3><span class="arr">▾</span></div>
+      <div class="set-body open">
+        <p style="font-size:13px;color:var(--txt2);margin-bottom:10px;">Server: <span id="srv-p" style="font-weight:600;">Checking…</span></p>
+        <div class="code-block">pip3 install pyautogui<br>python3 typer_server.py</div>
+        <div class="row" style="gap:8px;margin-top:10px;">
+          <button class="dl-btn" onclick="dlServer()">Download typer_server.py</button>
+          <button class="dl-btn" onclick="dlRequirements()">Download requirements.txt</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="set-accordion">
+      <div class="set-hdr" onclick="toggleSet(this)"><h3>Keyboard Shortcuts</h3><span class="arr">▾</span></div>
+      <div class="set-body">
+        <div class="shortcuts-grid">
+          <div class="sc-item"><span class="sc-desc">Start typing</span><span class="sc-key">Cmd+Enter</span></div>
+          <div class="sc-item"><span class="sc-desc">Stop typing</span><span class="sc-key">Esc</span></div>
+          <div class="sc-item"><span class="sc-desc">Pause / Resume</span><span class="sc-key">P</span></div>
+          <div class="sc-item"><span class="sc-desc">Skip sentence</span><span class="sc-key">S</span></div>
+        </div>
+        <p style="font-size:11px;color:var(--txt3);margin-top:10px;">Shortcuts only work when not typing in a text field.</p>
+      </div>
+    </div>
+
+    <div class="set-accordion">
+      <div class="set-hdr" onclick="toggleSet(this)"><h3>Appearance</h3><span class="arr">▾</span></div>
+      <div class="set-body">
+        <div class="set-row">
+          <div class="set-row-left"><label>Light theme</label><div class="hint">Switch to white interface</div></div>
+          <label class="toggle"><input type="checkbox" id="themeToggle" onchange="toggleThemeFromSettings()"><span class="slider-t"></span></label>
+        </div>
+        <div class="set-row">
+          <div class="set-row-left"><label>Font size</label></div>
+          <div class="range-wrap">
+            <input type="range" min="12" max="18" value="14" id="fontSizeRange" oninput="setFontSize(this.value)">
+            <div class="range-val" id="fontSizeVal">14px</div>
+          </div>
+        </div>
+        <div class="set-row">
+          <div class="set-row-left"><label>Typing sounds</label><div class="hint">Subtle click on each keystroke</div></div>
+          <label class="toggle"><input type="checkbox" id="soundToggle" onchange="toggleSound()"><span class="slider-t"></span></label>
+        </div>
+      </div>
+    </div>
+
+    <div class="set-accordion">
+      <div class="set-hdr" onclick="toggleSet(this)"><h3>Typing Behavior</h3><span class="arr">▾</span></div>
+      <div class="set-body">
+        <div class="set-row">
+          <div class="set-row-left"><label>Typo intensity</label><div class="hint">How often typos occur</div></div>
+          <div class="range-wrap">
+            <input type="range" min="0" max="100" value="50" id="typoRange" oninput="setTypoIntensity(this.value)">
+            <div class="range-val" id="typoVal">Medium</div>
+          </div>
+        </div>
+        <div class="set-row">
+          <div class="set-row-left"><label>Burst typing</label><div class="hint">Natural 2–6 char bursts</div></div>
+          <label class="toggle"><input type="checkbox" id="burstToggle" checked onchange="saveSettings()"><span class="slider-t"></span></label>
+        </div>
+        <div class="set-row">
+          <div class="set-row-left"><label>Word familiarity</label><div class="hint">Common words typed faster</div></div>
+          <label class="toggle"><input type="checkbox" id="familiarityToggle" checked onchange="saveSettings()"><span class="slider-t"></span></label>
+        </div>
+      </div>
+    </div>
+
+    <div class="set-accordion">
+      <div class="set-hdr" onclick="toggleSet(this)"><h3>Personal Profile</h3><span class="arr">▾</span></div>
+      <div class="set-body">
+        <div id="profileView"></div>
+        <button class="dl-btn" style="margin-top:12px;" onclick="clearProfile()">Clear Profile & Sessions</button>
+      </div>
+    </div>
+
+  </div>
+
+</div><!-- end app -->
+
+<script>
+/* ════════════ HERO ════════════ */
+(function buildHero(){
+  'HumanTyper'.split('').forEach((ch,i)=>{
+    const s=document.createElement('span');
+    s.className='letter';s.textContent=ch;
+    s.style.animationDelay=(0.04+i*0.065)+'s';
+    document.getElementById('heroTitle').appendChild(s);
+  });
+})();
+
+let heroServerChecked=false;
+function enterStudio(){
+  document.getElementById('hero').classList.add('exit');
+  setTimeout(()=>{document.getElementById('hero').style.display='none';document.getElementById('app').classList.add('visible');},600);
+}
+
+/* ════════════ PROFILES & MODES ════════════ */
+const PROFILES={
+  slow:  {label:'slow', base_iki:400,iki_sd:160,error_rate:.010,corr_chance:.80,corr_range:5, pause_after_word:120,pause_after_punct:450},
+  normal:{label:'normal',base_iki:238,iki_sd:111,error_rate:.012,corr_chance:.80,corr_range:3, pause_after_word:85, pause_after_punct:300},
+  fast:  {label:'fast', base_iki:160,iki_sd:75, error_rate:.020,corr_chance:.60,corr_range:8, pause_after_word:50, pause_after_punct:180},
+  expert:{label:'expert',base_iki:95, iki_sd:45, error_rate:.025,corr_chance:.50,corr_range:12,pause_after_word:30, pause_after_punct:120},
+};
+const MODES={
+  human:  {base_iki:220,iki_sd:120,error_rate:.020,corr_chance:.80,corr_range:4,pause_after_word:100,pause_after_punct:340},
+  normal: null, // uses PROFILES[speed]
+  fast:   {base_iki:80, iki_sd:30, error_rate:.001,corr_chance:.95,corr_range:2,pause_after_word:30, pause_after_punct:100},
+  precise:{base_iki:180,iki_sd:60, error_rate:.005,corr_chance:.98,corr_range:2,pause_after_word:70, pause_after_punct:220},
+};
+const REALISM={low:{pause_mult:.4,extra_sd:.3},medium:{pause_mult:1.0,extra_sd:1.0},high:{pause_mult:1.6,extra_sd:1.5}};
+const QUOTES={
+  easy:[
+    "The quick brown fox jumps over the lazy dog near the riverbank.",
+    "Typing fast requires practice and muscle memory every single day.",
+    "Consistency is more important than perfection. Keep typing and improving.",
+    "Practice builds precision. Every error teaches your fingers the right path.",
+    "A good programmer writes code that humans can understand, not just machines.",
+  ],
+  medium:[
+    "Programming is not about what you know; it is about what you can figure out under pressure.",
+    "To be or not to be, that is the question — whether it is nobler in the mind to suffer.",
+    "Design is not just what it looks like and feels like — design is how it works under your fingertips.",
+    "The best way to predict the future is to invent it, one keystroke at a time, with precision.",
+    "All great achievements require time, dedication, and a willingness to learn from every mistake.",
+  ],
+  hard:[
+    "The Byzantine fault-tolerance problem requires 3f+1 nodes to tolerate f arbitrary failures in distributed systems.",
+    "Cryptographic hash functions like SHA-256 produce a fixed-length 256-bit digest regardless of input size.",
+    "JavaScript event loop processes microtasks like Promise callbacks before macrotasks like setTimeout calls.",
+    "Quantum entanglement enables correlated measurement outcomes across arbitrary distances, violating Bell inequalities.",
+    "The Zermelo-Fraenkel axioms with the Axiom of Choice form the standard foundation for most of modern mathematics.",
+  ]
+};
+
+/* ════════════ STATE ════════════ */
+let speed='normal',delay=5,realism='medium',typoIntensity=1.0,activeMode='normal';
+let pollTimer=null,cntTimer=null,serverOk=false;
+let useProfileMode=false,soundEnabled=false,paused=false;
+let wpmHistory=[],ikiHistory=[],textHistory=[];
+let aDiff='easy',aRef='',aStart=null,aRunning=false,aWpmReadings=[];
+let aHistory=JSON.parse(localStorage.getItem('ht_history')||'[]');
+let profileSessions=JSON.parse(localStorage.getItem('ht_sessions')||'[]');
+let personalProfile=JSON.parse(localStorage.getItem('ht_profile')||'null');
+let darkModeFlag=(localStorage.getItem('ht_theme')||'dark')==='dark';
+let aiMode=localStorage.getItem('ht_aimode')||'ollama';
+
+/* ════════════ INIT ════════════ */
+document.addEventListener('DOMContentLoaded',()=>{
+  applyTheme();loadNewQuote();renderHistory();renderProfileView();updateProfileProgress();
+  renderHistEmpty();setAiMode(aiMode);loadSavedSettings();
+  setInterval(checkServer,3000);checkServer();
+});
+document.addEventListener('keydown',e=>{
+  const tag=document.activeElement.tagName;
+  if(tag==='TEXTAREA'||tag==='INPUT')return;
+  if((e.metaKey||e.ctrlKey)&&e.key==='Enter'){e.preventDefault();startTyping();}
+  if(e.key==='Escape')stopTyping();
+  if(e.key==='p'||e.key==='P')pauseTyping();
+  if(e.key==='s'||e.key==='S')skipSentence();
+});
+document.addEventListener('click',e=>{
+  if(!e.target.closest('.paste-hist-wrap'))
+    document.getElementById('pasteHistMenu').classList.remove('show');
+});
+function loadSavedSettings(){
+  const s=JSON.parse(localStorage.getItem('ht_settings')||'{}');
+  if(s.speed)speed=s.speed;
+  if(s.delay)delay=s.delay;
+  if(s.realism)realism=s.realism;
+  if(s.typoIntensity!==undefined)typoIntensity=s.typoIntensity;
+  if(s.burst===false)document.getElementById('burstToggle').checked=false;
+  if(s.familiarity===false)document.getElementById('familiarityToggle').checked=false;
+  // sync pills
+  document.querySelectorAll('#speed-pills .pill').forEach(b=>b.classList.toggle('on',b.textContent.toLowerCase()===speed));
+  document.querySelectorAll('#delay-pills .pill').forEach(b=>b.classList.toggle('on',b.textContent===delay+'s'));
+  document.querySelectorAll('#realism-pills .pill').forEach(b=>b.classList.toggle('on',b.textContent.toLowerCase()===realism));
+}
+function saveSettings(){
+  localStorage.setItem('ht_settings',JSON.stringify({speed,delay,realism,typoIntensity,
+    burst:document.getElementById('burstToggle').checked,
+    familiarity:document.getElementById('familiarityToggle').checked}));
+}
+
+/* ════════════ SERVER ════════════ */
+async function checkServer(){
+  try{
+    const r=await fetch('http://localhost:7700/ping',{signal:AbortSignal.timeout(1500)});
+    if(r.ok){
+      serverOk=true;setPill(true);
+      // animate hero pill
+      if(!heroServerChecked){heroServerChecked=true;animateHeroPill(true);}
+      const d=await(await fetch('http://localhost:7700/status')).json();
+      if(d.state==='typing'||d.state==='paused')pollStatus();
+      return;
+    }
+  }catch(e){}
+  serverOk=false;setPill(false);
+  if(!heroServerChecked){animateHeroPill(false);}
+}
+function animateHeroPill(ok){
+  const pill=document.getElementById('heroPill');
+  const txt=document.getElementById('heroPillTxt');
+  if(ok){pill.classList.add('connected');txt.textContent='Server online';}
+  else{txt.textContent='Server offline — see Settings';}
+}
+function setPill(ok){
+  const p=document.getElementById('pill');
+  document.getElementById('pill-txt').textContent=ok?'Server connected':'Server offline';
+  p.className='s-pill '+(ok?'ok':'err');
+  const s=document.getElementById('srv-p');
+  if(s)s.innerHTML=ok?'<span style="color:var(--green)">Connected</span>':'<span style="color:var(--acc-l)">Not running</span> — <code style="font-family:var(--mono);font-size:11px;background:var(--s2);padding:1px 5px;border-radius:3px;">python3 typer_server.py</code>';
+}
+
+/* ════════════ TABS ════════════ */
+function tab(i){
+  document.querySelectorAll('.tab').forEach((t,j)=>t.classList.toggle('active',j===i));
+  document.querySelectorAll('.page').forEach((p,j)=>p.classList.toggle('active',j===i));
+}
+
+/* ════════════ TYPE TAB ════════════ */
+document.getElementById('fileIn').addEventListener('change',e=>{
+  const f=e.target.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=ev=>{const t=ev.target.result;document.getElementById('tbox').value=t;saveTextHistory(t);updateMeta();};
+  r.readAsText(f);
+});
+document.getElementById('tbox').addEventListener('input',updateMeta);
+function updateMeta(){
+  const n=document.getElementById('tbox').value.length;
+  const cfg=getActiveCfg();
+  const s=Math.round(n*cfg.base_iki/1000);
+  document.getElementById('char-meta').textContent=n+' chars';
+  document.getElementById('est-meta').textContent=n>0?'· est. '+(s>=60?Math.floor(s/60)+'m '+(s%60)+'s':s+'s'):'';
+}
+function getActiveCfg(){
+  let base;
+  if(activeMode!=='normal'&&MODES[activeMode])base={...MODES[activeMode]};
+  else base=useProfileMode&&personalProfile?{...personalProfile}:{...PROFILES[speed]};
+  const r=REALISM[realism];
+  return{
+    ...base,label:activeMode,
+    error_rate:base.error_rate*typoIntensity,
+    pause_after_word:(base.pause_after_word||80)*r.pause_mult,
+    pause_after_punct:(base.pause_after_punct||300)*r.pause_mult,
+    iki_sd:(base.iki_sd||111)*r.extra_sd,
+    use_burst:document.getElementById('burstToggle').checked,
+    use_familiarity:document.getElementById('familiarityToggle').checked,
+  };
+}
+function setMode(el,m){
+  activeMode=m;
+  document.querySelectorAll('#mode-btns .mode-pill').forEach(b=>b.classList.remove('on'));
+  el.classList.add('on');updateMeta();
+}
+function setSpeed(el,s){
+  speed=s;useProfileMode=false;activeMode='normal';
+  document.getElementById('profileToggle').checked=false;
+  document.querySelectorAll('#speed-pills .pill').forEach(b=>b.classList.remove('on'));
+  el.classList.add('on');
+  document.getElementById('profileBanner').classList.remove('show');
+  document.querySelectorAll('#mode-btns .mode-pill').forEach((b,i)=>{if(i===1)b.classList.add('on');else b.classList.remove('on');});
+  updateMeta();saveSettings();
+}
+function setDelay(el,d){
+  delay=d;
+  document.querySelectorAll('#delay-pills .pill').forEach(b=>b.classList.remove('on'));
+  el.classList.add('on');saveSettings();
+}
+function setRealism(el,r){
+  realism=r;
+  document.querySelectorAll('#realism-pills .pill').forEach(b=>b.classList.remove('on'));
+  el.classList.add('on');saveSettings();
+}
+function clearText(){document.getElementById('tbox').value='';document.getElementById('char-meta').textContent='0 chars';document.getElementById('est-meta').textContent='';}
+function sendToAnalyzerFromToolbar(){const t=document.getElementById('tbox').value.trim();if(!t){alert('No text.');return;}aRef=t.slice(0,600);tab(1);resetAnalyzer();}
+function setStatus(msg,cls){const el=document.getElementById('status-txt');el.textContent=msg;el.className='status-line '+(cls||'');}
+function saveTextHistory(txt){const p=txt.trim().slice(0,80);if(!p)return;textHistory=textHistory.filter(t=>t!==p);textHistory.unshift(p);if(textHistory.length>5)textHistory.pop();}
+function togglePasteHist(e){
+  e.stopPropagation();
+  const menu=document.getElementById('pasteHistMenu');
+  if(!textHistory.length){menu.innerHTML='<div class="paste-hist-item" style="color:var(--txt3);">No history yet</div>';menu.classList.add('show');return;}
+  menu.innerHTML=textHistory.map((t,i)=>`<div class="paste-hist-item" onclick="pasteFromHist(${i})">${t}…</div>`).join('');
+  menu.classList.toggle('show');
+}
+function pasteFromHist(i){document.getElementById('tbox').value=textHistory[i];document.getElementById('pasteHistMenu').classList.remove('show');updateMeta();}
+
+/* ════════════ TYPING FLOW ════════════ */
+function startTyping(){
+  if(!serverOk){alert('Server not running!\n\nOpen Terminal:\n  python3 typer_server.py\n\nLeave that window open.');return;}
+  const txt=document.getElementById('tbox').value.trim();
+  if(!txt){alert('Paste some text first.');return;}
+  saveTextHistory(txt);wpmHistory=[];ikiHistory=[];
+  document.getElementById('btn-start').disabled=true;
+  let n=delay;document.getElementById('cnt-n').textContent=n;
+  document.getElementById('overlay').classList.add('show');
+  cntTimer=setInterval(()=>{
+    n--;document.getElementById('cnt-n').textContent=n;
+    if(n<=0){clearInterval(cntTimer);document.getElementById('overlay').classList.remove('show');doType(txt);}
+  },1000);
+}
+function cancelCnt(){
+  clearInterval(cntTimer);document.getElementById('overlay').classList.remove('show');
+  document.getElementById('btn-start').disabled=false;setStatus('Cancelled.','dim');
+}
+async function doType(txt){
+  setStatus('Typing…','');paused=false;
+  ['btn-stop','btn-pause','btn-skip'].forEach(id=>document.getElementById(id).classList.add('show'));
+  document.getElementById('prog').style.width='0%';
+  document.getElementById('previewBox').classList.add('active-typing');
+  document.getElementById('previewText').textContent='';
+  ['s-wpm','s-chars','s-typos','s-fixed'].forEach(k=>document.getElementById(k).textContent='—');
+  try{
+    await fetch('http://localhost:7700/type',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:txt,cfg:getActiveCfg()})});
+    pollStatus();
+  }catch(e){
+    setStatus('Error — is the server running?','err');
+    document.getElementById('btn-start').disabled=false;
+    ['btn-stop','btn-pause','btn-skip'].forEach(id=>document.getElementById(id).classList.remove('show'));
+    document.getElementById('previewBox').classList.remove('active-typing');
+  }
+}
+function pollStatus(){
+  clearInterval(pollTimer);
+  pollTimer=setInterval(async()=>{
+    try{
+      const d=await(await fetch('http://localhost:7700/status')).json();
+      document.getElementById('s-chars').textContent=d.chars;
+      document.getElementById('s-typos').textContent=d.typos;
+      document.getElementById('s-fixed').textContent=d.corrections;
+      document.getElementById('s-wpm').textContent=d.wpm||'—';
+      if(d.wpm>0){wpmHistory.push(d.wpm);ikiHistory.push(d.wpm);drawSparkline();drawHumanity();}
+      if(d.total>0){
+        const pct=Math.min(100,d.chars/d.total*100).toFixed(1)+'%';
+        document.getElementById('prog').style.width=pct;
+        // live preview — show typed portion of original text
+        const origTxt=document.getElementById('tbox').value;
+        document.getElementById('previewText').textContent=origTxt.slice(0,d.chars);
+      }
+      if(d.state==='paused')setStatus('Paused — press P to resume','warn');
+      if(d.state!=='typing'&&d.state!=='paused'){
+        clearInterval(pollTimer);
+        document.getElementById('btn-start').disabled=false;
+        ['btn-stop','btn-pause','btn-skip'].forEach(id=>document.getElementById(id).classList.remove('show'));
+        document.getElementById('btn-pause').textContent='PAUSE';paused=false;
+        document.getElementById('previewBox').classList.remove('active-typing');
+        if(d.state==='done'){
+          document.getElementById('prog').style.width='100%';
+          setStatus(`Done — ${d.chars} chars · ${d.wpm} WPM · ${d.typos} typos · ${d.corrections} fixed`,'ok');
+        }else setStatus('Stopped.','dim');
+      }
+    }catch(e){clearInterval(pollTimer);}
+  },250);
+}
+async function stopTyping(){
+  clearInterval(pollTimer);clearInterval(cntTimer);
+  document.getElementById('overlay').classList.remove('show');
+  try{await fetch('http://localhost:7700/stop',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});}catch(e){}
+  document.getElementById('btn-start').disabled=false;
+  ['btn-stop','btn-pause','btn-skip'].forEach(id=>document.getElementById(id).classList.remove('show'));
+  document.getElementById('btn-pause').textContent='PAUSE';paused=false;
+  document.getElementById('previewBox').classList.remove('active-typing');
+  setStatus('Stopped.','dim');
+}
+async function pauseTyping(){
+  const btn=document.getElementById('btn-pause');
+  if(!paused){
+    await fetch('http://localhost:7700/pause',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+    paused=true;btn.textContent='RESUME';
+  }else{
+    await fetch('http://localhost:7700/resume',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+    paused=false;btn.textContent='PAUSE';setStatus('Typing…','');
+  }
+}
+async function skipSentence(){try{await fetch('http://localhost:7700/skip',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});}catch(e){}}
+
+/* ════════════ SPARKLINE ════════════ */
+function drawSparkline(){
+  const cv=document.getElementById('sparkCanvas'),ctx=cv.getContext('2d');
+  const W=cv.width,H=cv.height;
+  ctx.clearRect(0,0,W,H);
+  if(wpmHistory.length<2)return;
+  const max=Math.max(...wpmHistory),min=Math.min(...wpmHistory),range=max-min||1;
+  const grad=ctx.createLinearGradient(0,0,0,H);
+  grad.addColorStop(0,'rgba(220,38,38,0.4)');grad.addColorStop(1,'rgba(220,38,38,0)');
+  ctx.beginPath();
+  wpmHistory.forEach((v,i)=>{const x=i/(wpmHistory.length-1)*W,y=H-(v-min)/range*(H-6)-3;i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
+  ctx.lineTo(W,H);ctx.lineTo(0,H);ctx.closePath();ctx.fillStyle=grad;ctx.fill();
+  ctx.strokeStyle='rgba(239,68,68,.85)';ctx.lineWidth=1.5;ctx.lineJoin='round';ctx.beginPath();
+  wpmHistory.forEach((v,i)=>{const x=i/(wpmHistory.length-1)*W,y=H-(v-min)/range*(H-6)-3;i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
+  ctx.stroke();
+}
+
+/* ════════════ HUMANITY CANVAS ════════════ */
+function drawHumanity(){
+  const cv=document.getElementById('humanityCanvas'),ctx=cv.getContext('2d');
+  const W=cv.width,H=cv.height;
+  ctx.clearRect(0,0,W,H);
+  if(ikiHistory.length<3){document.getElementById('humanityScore').textContent='—';return;}
+  const mean=ikiHistory.reduce((a,b)=>a+b)/ikiHistory.length;
+  const sd=Math.sqrt(ikiHistory.reduce((a,b)=>a+(b-mean)**2,0)/ikiHistory.length);
+  const cv_score=sd/mean;
+  const score=Math.max(0,Math.min(100,Math.round(100-(Math.abs(cv_score-0.18)*380))));
+  document.getElementById('humanityScore').textContent=score;
+  const max=Math.max(...ikiHistory),min=Math.min(...ikiHistory),range=max-min||1;
+  const recent=ikiHistory.slice(-90);
+  recent.forEach((v,i)=>{
+    const x=(i/(Math.max(recent.length-1,1)))*W;
+    const y=H-(v-min)/range*(H-8)-4;
+    ctx.beginPath();ctx.arc(x,y,2.5,0,Math.PI*2);
+    ctx.fillStyle=`rgba(220,38,38,${0.25+i/recent.length*.7})`;ctx.fill();
+  });
+}
+
+/* ════════════ ANALYZER ════════════ */
+function setDiff(el,d){aDiff=d;document.querySelectorAll('.diff-btn').forEach(b=>b.classList.remove('on'));el.classList.add('on');loadNewQuote();}
+function loadNewQuote(){const arr=QUOTES[aDiff];aRef=arr[Math.floor(Math.random()*arr.length)];resetAnalyzer();}
+function useTyperText(){const t=document.getElementById('tbox').value.trim();if(!t){alert('No text in Type tab.');return;}aRef=t.slice(0,600);tab(1);resetAnalyzer();}
+function resetAnalyzer(){aStart=null;aRunning=false;aWpmReadings=[];document.getElementById('ana-input').value='';renderRef('');['a-wpm','a-mis','a-acc','a-con'].forEach((k,i)=>document.getElementById(k).textContent=i===2?'100%':i===3?'—':'0');document.getElementById('ana-input').focus();}
+function renderRef(typed){
+  const ref=aRef,box=document.getElementById('refBox'),frag=document.createDocumentFragment();
+  for(let i=0;i<ref.length;i++){
+    const sp=document.createElement('span');sp.className='rc';sp.textContent=ref[i];
+    if(i<typed.length)sp.classList.add(typed[i]===ref[i]?'cor':'inc');
+    else if(i===typed.length)sp.classList.add('pen','cur');
+    else sp.classList.add('pen');
+    frag.appendChild(sp);
+  }
+  box.innerHTML='';box.appendChild(frag);
+  const extra=typed.length-ref.length;
+  const ew=document.getElementById('extra-warn');
+  if(extra>0){ew.style.display='inline-block';ew.textContent=`+${extra} extra chars — mistakes`;}else ew.style.display='none';
+  document.getElementById('char-ct').textContent=`${typed.length} / ${ref.length}`;
+  let cor=0,err=0,mx=Math.max(ref.length,typed.length);
+  for(let i=0;i<mx;i++){if(i<ref.length&&i<typed.length){typed[i]===ref[i]?cor++:err++;}else err++;}
+  const acc=mx>0?Math.min(100,cor/mx*100):100;
+  let wpm=0;
+  if(aStart&&aRunning){const mins=(Date.now()-aStart)/60000;if(mins>0&&cor>0)wpm=Math.min(300,Math.round(cor/5/mins));}
+  document.getElementById('a-wpm').textContent=wpm;
+  document.getElementById('a-mis').textContent=err;
+  document.getElementById('a-acc').textContent=acc.toFixed(1)+'%';
+  if(wpm>0&&aRunning){aWpmReadings.push(wpm);if(aWpmReadings.length>=3){const m2=aWpmReadings.reduce((a,b)=>a+b)/aWpmReadings.length;const sd2=Math.sqrt(aWpmReadings.reduce((a,b)=>a+(b-m2)**2,0)/aWpmReadings.length);document.getElementById('a-con').textContent=Math.max(0,Math.min(100,Math.round(100-sd2)))+'%';}}
+  return{wpm,err,acc:acc.toFixed(1)};
+}
+document.getElementById('ana-input').addEventListener('input',e=>{
+  let v=e.target.value.replace(/[\n\r]+/g,'');
+  if(v!==e.target.value)e.target.value=v;
+  if(!aStart&&v.length>0){aStart=Date.now();aRunning=true;}
+  if(v.length===0){aStart=null;aRunning=false;}
+  if(soundEnabled)playClick();
+  const s=renderRef(v);
+  if(v.length>=aRef.length&&aRef.length>0&&aStart)finishAnalyzer(s);
+});
+function finishAnalyzer(s){
+  if(!aStart)return;aRunning=false;
+  const v=document.getElementById('ana-input').value;
+  if(!s){let cor=0,err=0,mx=Math.max(aRef.length,v.length);for(let i=0;i<mx;i++){if(i<aRef.length&&i<v.length){v[i]===aRef[i]?cor++:err++;}else err++;}const acc=mx>0?Math.min(100,cor/mx*100):100;const mins=(Date.now()-aStart)/60000;const wpm=mins>0&&cor>0?Math.min(300,Math.round(cor/5/mins)):0;s={wpm,err,acc:acc.toFixed(1)};}
+  const mean=aWpmReadings.length?aWpmReadings.reduce((a,b)=>a+b)/aWpmReadings.length:s.wpm;
+  const sd=aWpmReadings.length>=3?Math.sqrt(aWpmReadings.reduce((a,b)=>a+(b-mean)**2,0)/aWpmReadings.length):null;
+  const consistency=sd!==null?Math.max(0,Math.min(100,Math.round(100-sd))):null;
+  const entry={...s,consistency,diff:aDiff,time:new Date().toLocaleTimeString(),date:new Date().toLocaleDateString(),duration:Math.round((Date.now()-aStart)/1000),id:Date.now()};
+  aHistory.unshift(entry);if(aHistory.length>20)aHistory.pop();
+  localStorage.setItem('ht_history',JSON.stringify(aHistory));
+  recordSession({wpm:s.wpm,wpmSd:sd||20,errorRate:s.err/Math.max(1,aRef.length),acc:parseFloat(s.acc)});
+  renderHistory();updateProfileProgress();aStart=null;
+}
+function renderHistEmpty(){const el=document.getElementById('hist-list');if(!aHistory.length){el.innerHTML='<div class="empty-state"><p>Finish a test to see your results here</p></div>';}}
+function renderHistory(){
+  const el=document.getElementById('hist-list');
+  if(!aHistory.length){renderHistEmpty();return;}
+  el.innerHTML=aHistory.map(h=>`
+    <div class="hist-item" id="hi-${h.id}">
+      <span class="hw">${h.wpm} WPM</span><span class="ha">${h.acc}%</span>
+      <span class="hm">${h.err} err</span>
+      ${h.consistency!==null?`<span class="hcons">${h.consistency}% con</span>`:''}
+      <span class="hdiff">${h.diff}</span><span class="htime">${h.time}</span>
+      <button class="hdel" onclick="deleteHistItem(${h.id})">✕</button>
+    </div>`).join('');
+}
+function deleteHistItem(id){aHistory=aHistory.filter(h=>h.id!==id);localStorage.setItem('ht_history',JSON.stringify(aHistory));renderHistory();}
+function clearHistory(){if(!confirm('Clear all history?'))return;aHistory=[];localStorage.setItem('ht_history','[]');renderHistory();}
+
+/* ════════════ PERSONAL PROFILE ════════════ */
+const SESSIONS_NEEDED=5;
+function recordSession(d){profileSessions.push({...d,ts:Date.now()});if(profileSessions.length>20)profileSessions=profileSessions.slice(-20);localStorage.setItem('ht_sessions',JSON.stringify(profileSessions));}
+function updateProfileProgress(){
+  const el=document.getElementById('profileProgress'),bar=document.getElementById('profileProgBar'),txt=document.getElementById('profileProgressTxt'),btn=document.getElementById('genProfileBtn');
+  if(!el)return;const n=profileSessions.length;
+  if(n===0){el.style.display='none';return;}
+  el.style.display='block';bar.style.width=Math.min(100,Math.round(n/SESSIONS_NEEDED*100))+'%';
+  if(n<SESSIONS_NEEDED){txt.textContent=`${n} of ${SESSIONS_NEEDED} sessions — ${SESSIONS_NEEDED-n} more needed`;btn.style.display='none';}
+  else{txt.textContent=`${n} sessions recorded — ready!`;btn.style.display='inline-block';}
+}
+function generateProfile(){
+  if(profileSessions.length<SESSIONS_NEEDED){alert(`Complete ${SESSIONS_NEEDED} sessions first.`);return;}
+  const wpms=profileSessions.map(s=>s.wpm).filter(Boolean);
+  const sds=profileSessions.map(s=>s.wpmSd).filter(Boolean);
+  const errs=profileSessions.map(s=>s.errorRate).filter(Boolean);
+  const avg=a=>a.reduce((x,y)=>x+y)/a.length;
+  const avgWpm=avg(wpms),base_iki=Math.round(60000/(avgWpm*5));
+  personalProfile={label:'personal',base_iki,iki_sd:Math.round(avg(sds)*base_iki/5),error_rate:Math.min(.06,avg(errs)),corr_chance:.75,corr_range:4,pause_after_word:Math.round(base_iki*.35),pause_after_punct:Math.round(base_iki*1.2),wpm_avg:Math.round(avgWpm),generated:new Date().toLocaleDateString()};
+  localStorage.setItem('ht_profile',JSON.stringify(personalProfile));renderProfileView();
+  alert(`Profile generated!\nAvg WPM: ${Math.round(avgWpm)}\nBase delay: ${base_iki}ms\n\nToggle "Use Personal Profile" in the Type tab.`);
+}
+function renderProfileView(){
+  const el=document.getElementById('profileView');if(!el)return;
+  if(!personalProfile){el.innerHTML='<p style="font-size:13px;color:var(--txt3);">No profile yet. Complete '+SESSIONS_NEEDED+' Analyzer sessions to unlock.</p>';return;}
+  el.innerHTML=`<div class="profile-grid-sm">
+    <div class="psc"><div class="plabel">Avg WPM</div><div class="pval" style="color:var(--green)">${personalProfile.wpm_avg}</div></div>
+    <div class="psc"><div class="plabel">Base delay</div><div class="pval">${personalProfile.base_iki}ms</div></div>
+    <div class="psc"><div class="plabel">Error rate</div><div class="pval" style="color:var(--warn)">${(personalProfile.error_rate*100).toFixed(1)}%</div></div>
+    <div class="psc"><div class="plabel">Generated</div><div class="pval" style="font-size:12px;color:var(--txt2)">${personalProfile.generated}</div></div>
+  </div>`;
+}
+function toggleProfileMode(){
+  if(!personalProfile){alert('Generate your profile first — complete '+SESSIONS_NEEDED+' Analyzer sessions.');document.getElementById('profileToggle').checked=false;return;}
+  useProfileMode=!useProfileMode;
+  document.getElementById('profileToggle').checked=useProfileMode;
+  const banner=document.getElementById('profileBanner');
+  if(useProfileMode){banner.classList.add('show');document.getElementById('profileBannerStats').textContent=`Avg ${personalProfile.wpm_avg} WPM · ${personalProfile.base_iki}ms · ${(personalProfile.error_rate*100).toFixed(1)}% err`;document.querySelectorAll('#speed-pills .pill').forEach(b=>b.classList.remove('on'));}
+  else{banner.classList.remove('show');document.querySelectorAll('#speed-pills .pill').forEach((b,i)=>{if(i===1)b.classList.add('on');});}
+  updateMeta();
+}
+function clearProfile(){if(!confirm('Clear profile and sessions?'))return;personalProfile=null;profileSessions=[];localStorage.removeItem('ht_profile');localStorage.removeItem('ht_sessions');useProfileMode=false;document.getElementById('profileToggle').checked=false;document.getElementById('profileBanner').classList.remove('show');document.querySelectorAll('#speed-pills .pill').forEach((b,i)=>{b.classList.toggle('on',i===1);});renderProfileView();updateProfileProgress();}
+
+/* ════════════ AI MODE ════════════ */
+function setAiMode(mode){
+  aiMode=mode;localStorage.setItem('ht_aimode',mode);
+  document.getElementById('modeOllama').classList.toggle('on',mode==='ollama');
+  document.getElementById('modeClaude').classList.toggle('on',mode==='claude');
+  document.getElementById('ollamaPanel').style.display=mode==='ollama'?'':'none';
+  document.getElementById('claudePanel').style.display=mode==='claude'?'':'none';
+}
+
+/* ════════════ AI WRITE ════════════ */
+async function runAI(){
+  const prompt=document.getElementById('ai-prompt').value.trim();
+  if(!prompt){alert('Enter a prompt first.');return;}
+  const btn=document.getElementById('btn-gen'),spin=document.getElementById('ai-spin');
+  btn.disabled=true;btn.textContent='Generating…';spin.textContent='';
+  document.getElementById('ai-out').style.display='none';
+  document.getElementById('ai-out-empty').style.display='flex';
+  document.getElementById('ai-out').value='';
+  try{
+    let text='';
+    if(aiMode==='ollama'){
+      const model=document.getElementById('ollama-model').value.trim()||'llama3.2:3b';
+      const res=await fetch('http://localhost:11434/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model,prompt:`Write only what is requested, no preamble. Request: ${prompt}`,stream:false})});
+      if(!res.ok)throw new Error(`Ollama error ${res.status}. Run: OLLAMA_ORIGINS="*" ollama serve`);
+      const data=await res.json();if(data.error)throw new Error(data.error);text=data.response;
+    }else{
+      const key=document.getElementById('ai-key').value.trim();
+      if(!key){alert('Enter your Claude API key.');btn.disabled=false;btn.textContent='Generate';return;}
+      const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1024,messages:[{role:'user',content:prompt}]})});
+      const data=await res.json();if(data.error)throw new Error(data.error.message);text=data.content[0].text;
+    }
+    document.getElementById('ai-out').value=text;
+    document.getElementById('ai-out').style.display='';
+    document.getElementById('ai-out-empty').style.display='none';
+    spin.textContent='Done';
+  }catch(e){spin.textContent='Error: '+e.message;}
+  finally{btn.disabled=false;btn.textContent='Generate';}
+}
+function sendToTyper(){const t=document.getElementById('ai-out').value.trim();if(!t){alert('Generate text first.');return;}document.getElementById('tbox').value=t;tab(0);updateMeta();setStatus('AI text loaded — click START when ready','dim');}
+function sendToAnalyzer(){const t=document.getElementById('ai-out').value.trim();if(!t){alert('Generate text first.');return;}aRef=t.replace(/\s+/g,' ').trim().slice(0,600);tab(1);resetAnalyzer();}
+
+/* ════════════ HELP CHAT ════════════ */
+const HELP_SYS='You are a concise assistant for HumanTyper Pro. Only answer questions about: setup, running the server, fixing errors, Ollama setup, features, or typing improvement. Keep answers short and practical. No markdown.';
+async function sendChat(){
+  const inp=document.getElementById('chat-inp');const msg=inp.value.trim();if(!msg)return;
+  addChatMsg(msg,'user');inp.value='';
+  const btn=document.getElementById('chat-send-btn');btn.disabled=true;
+  const thinking=addChatMsg('Thinking…','ai thinking');
+  try{
+    let text='';
+    if(aiMode==='ollama'){
+      const model=document.getElementById('ollama-model').value.trim()||'llama3.2:3b';
+      const res=await fetch('http://localhost:11434/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model,prompt:HELP_SYS+'\n\nUser: '+msg,stream:false})});
+      if(!res.ok)throw new Error('Ollama not running. Try: OLLAMA_ORIGINS="*" ollama serve');
+      const data=await res.json();text=data.response||'No response.';
+    }else{
+      const key=document.getElementById('ai-key').value.trim();
+      if(!key)throw new Error('Enter your Claude API key in the AI Write tab.');
+      const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:512,system:HELP_SYS,messages:[{role:'user',content:msg}]})});
+      const data=await res.json();if(data.error)throw new Error(data.error.message);text=data.content[0].text;
+    }
+    thinking.remove();addChatMsg(text,'ai');
+  }catch(e){thinking.remove();addChatMsg(e.message||'Error.','ai');}
+  finally{btn.disabled=false;}
+}
+function addChatMsg(text,cls){const msgs=document.getElementById('chat-msgs');const div=document.createElement('div');div.className='msg '+cls;div.textContent=text;msgs.appendChild(div);msgs.scrollTop=msgs.scrollHeight;return div;}
+document.getElementById('chat-inp').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat();}});
+
+/* ════════════ SETTINGS ════════════ */
+function toggleSet(hdr){hdr.classList.toggle('open');hdr.nextElementSibling.classList.toggle('open');}
+function toggleTheme(){darkModeFlag=!darkModeFlag;localStorage.setItem('ht_theme',darkModeFlag?'dark':'light');applyTheme();}
+function toggleThemeFromSettings(){darkModeFlag=!document.getElementById('themeToggle').checked;localStorage.setItem('ht_theme',darkModeFlag?'dark':'light');applyTheme();}
+function applyTheme(){document.documentElement.setAttribute('data-theme',darkModeFlag?'dark':'light');document.getElementById('themeBtn').textContent=darkModeFlag?'Light':'Dark';document.getElementById('themeToggle').checked=!darkModeFlag;}
+let focusOn=false;
+function toggleFocus(){focusOn=!focusOn;document.body.classList.toggle('focus-mode',focusOn);document.getElementById('focusBtn').classList.toggle('on',focusOn);}
+function setFontSize(v){document.documentElement.style.fontSize=v+'px';document.getElementById('fontSizeVal').textContent=v+'px';}
+function setTypoIntensity(v){const l=['Off','Very Low','Low','Medium','High','Very High'];document.getElementById('typoVal').textContent=l[Math.round(v/20)]||'Medium';typoIntensity=v/50;saveSettings();}
+function toggleSound(){soundEnabled=document.getElementById('soundToggle').checked;}
+function toggleFaq(el){const a=el.nextElementSibling;a.classList.toggle('open');el.textContent=a.classList.contains('open')?el.textContent.replace('▸','▾'):el.textContent.replace('▾','▸');}
+
+/* downloads */
+function dlServer(){
+  // The actual full server content
+  const url='data:text/plain;charset=utf-8,'+encodeURIComponent(getServerCode());
+  const a=document.createElement('a');a.href=url;a.download='typer_server.py';a.click();
+}
+function getServerCode(){return`#!/usr/bin/env python3
+"""HumanTyper Pro Backend v3 — pip3 install pyautogui — python3 typer_server.py"""
+import http.server,json,threading,time,random,math,signal,sys
+try:
+    import pyautogui;pyautogui.FAILSAFE=True;PYAUTOGUI_OK=True
+except ImportError:
+    PYAUTOGUI_OK=False;print("Run: pip3 install pyautogui")
+ADJACENT={'q':['w','a'],'w':['q','e','s'],'e':['w','r','d'],'r':['e','t','f'],'t':['r','y','g'],'y':['t','u','h'],'u':['y','i','j'],'i':['u','o','k'],'o':['i','p','l'],'p':['o'],'a':['q','s','z'],'s':['w','a','d','x'],'d':['e','s','f','c'],'f':['r','d','g','v'],'g':['t','f','h','b'],'h':['y','g','j','n'],'j':['u','h','k','m'],'k':['i','j','l'],'l':['o','k'],'z':['a','x'],'x':['s','z','c'],'c':['d','x','v'],'v':['f','c','b'],'b':['g','v','n'],'n':['h','b','m'],'m':['j','n']}
+FAMILIAR={'the','and','that','this','with','for','are','not','you','have','was','they','from','but','been','has','had','can','will','would','there','their','which','about','when','your','more','also','into','time','some','could','these','its','than','then','now','look','only','come','think','know'}
+stop_flag=threading.Event();pause_flag=threading.Event();pause_flag.set();skip_flag=threading.Event()
+state={"state":"idle","chars":0,"typos":0,"corrections":0,"wpm":0,"total":0,"progress":0.0}
+def gauss(m,s):
+    u,v=0,0
+    while u==0:u=random.random()
+    while v==0:v=random.random()
+    return m+s*math.sqrt(-2*math.log(u))*math.cos(2*math.pi*v)
+def wait(ms):
+    end=time.time()+ms/1000
+    while time.time()<end:
+        if stop_flag.is_set() or skip_flag.is_set():return
+        pause_flag.wait(timeout=0.02);time.sleep(0.015)
+def word_at(text,pos):
+    s=pos
+    while s>0 and text[s-1] not in ' \\n.,!?;:':s-=1
+    e=pos
+    while e<len(text) and text[e] not in ' \\n.,!?;:':e+=1
+    return text[s:e].lower().strip("'\\"")
+def get_pause(cfg,ch,familiar=False):
+    base=max(30,gauss(cfg.get('base_iki',238),cfg.get('iki_sd',111)))
+    if familiar:base*=0.70
+    if ch in '.!?\\n':base+=gauss(cfg.get('pause_after_punct',300),80)
+    elif ch==',':base+=gauss(cfg.get('pause_after_punct',300)*0.45,40)
+    elif ch==' ':base+=gauss(cfg.get('pause_after_word',85),30)
+    else:base*=0.82
+    return max(25,base)
+def type_ch(ch):
+    if ch=='\\n':pyautogui.press('enter')
+    else:pyautogui.typewrite(ch,interval=0)
+def backspace_n(cfg,n):
+    for _ in range(n):
+        if stop_flag.is_set():return
+        pause_flag.wait();wait(max(25,gauss(cfg.get('base_iki',238)*0.72,30)));pyautogui.press('backspace')
+def do_type(text,cfg):
+    global state
+    stop_flag.clear();pause_flag.set();skip_flag.clear()
+    chars=typos=corrections=0;start=time.time()
+    state={"state":"typing","chars":0,"typos":0,"corrections":0,"wpm":0,"total":len(text),"progress":0.0}
+    use_burst=cfg.get('use_burst',True);use_fam=cfg.get('use_familiarity',True)
+    error_rate=cfg.get('error_rate',.012);corr_chance=cfg.get('corr_chance',.80);corr_range=cfg.get('corr_range',3)
+    i=0
+    while i<len(text):
+        if stop_flag.is_set():break
+        if skip_flag.is_set():
+            while i<len(text) and text[i] not in '.!?\\n':i+=1
+            if i<len(text):i+=1
+            skip_flag.clear();continue
+        pause_flag.wait()
+        ch=text[i];prev=text[i-1] if i>0 else ''
+        familiar=use_fam and word_at(text,i) in FAMILIAR
+        burst=random.randint(2,6) if use_burst and ch not in ' .,!?\\n' and prev in (' ','','\\n') else 1
+        for b in range(burst):
+            j=i+b
+            if j>=len(text) or (text[j] in ' .,!?\\n' and b>0) or stop_flag.is_set() or skip_flag.is_set():break
+            pause_flag.wait()
+            jch=text[j];adj=ADJACENT.get(jch.lower(),[])
+            make_typo=bool(adj) and random.random()<error_rate*(0.4 if familiar else 1.0)
+            wait(get_pause(cfg,jch,familiar))
+            if stop_flag.is_set():break
+            if make_typo:
+                tc=random.choice(adj);tc=tc.upper() if jch.isupper() else tc
+                type_ch(tc);typos+=1;chars+=1
+                r=random.random()
+                if r<corr_chance*0.4:
+                    wait(gauss(cfg.get('base_iki',238)*1.2,50))
+                    bn=min(random.randint(1,corr_range),j+1);backspace_n(cfg,bn);corrections+=1
+                    for k in range(max(0,j-bn+1),j+1):wait(get_pause(cfg,text[k]));type_ch(text[k]);chars+=1
+                elif r<corr_chance:
+                    dc=random.randint(1,min(3,len(text)-j-1));extra=0
+                    for k in range(dc):
+                        jj=j+1+k
+                        if jj>=len(text) or stop_flag.is_set():break
+                        wait(get_pause(cfg,text[jj]));type_ch(text[jj]);chars+=1;extra+=1
+                    wait(gauss(cfg.get('base_iki',238)*1.5,60));backspace_n(cfg,extra+1);corrections+=1
+                    for k in range(j,j+extra+1):
+                        if k>=len(text):break
+                        wait(get_pause(cfg,text[k]));type_ch(text[k]);chars+=1
+                    i+=extra
+            else:
+                type_ch(jch);chars+=1
+            elapsed=(time.time()-start)/60;wpm=round((chars/5)/elapsed) if elapsed>0 else 0
+            state={"state":"typing","chars":chars,"typos":typos,"corrections":corrections,"wpm":wpm,"total":len(text),"progress":round(chars/len(text)*100,1) if len(text)>0 else 0}
+        i+=burst
+    elapsed=(time.time()-start)/60;wpm=round((chars/5)/elapsed) if elapsed>0 else 0
+    state={"state":"done" if not stop_flag.is_set() else "stopped","chars":chars,"typos":typos,"corrections":corrections,"wpm":wpm,"total":len(text),"progress":100.0 if not stop_flag.is_set() else state.get('progress',0)}
+class H(http.server.BaseHTTPRequestHandler):
+    def log_message(self,*a):pass
+    def _cors(self):self.send_header("Access-Control-Allow-Origin","*");self.send_header("Access-Control-Allow-Methods","POST,GET,OPTIONS");self.send_header("Access-Control-Allow-Headers","Content-Type")
+    def do_OPTIONS(self):self.send_response(200);self._cors();self.end_headers()
+    def do_GET(self):
+        if self.path=="/status":self._j(state)
+        elif self.path=="/ping":self._j({"ok":True,"pyautogui":PYAUTOGUI_OK})
+        else:self.send_response(404);self.end_headers()
+    def do_POST(self):
+        n=int(self.headers.get("Content-Length",0));data=json.loads(self.rfile.read(n)) if n else {}
+        if self.path=="/type":
+            if not PYAUTOGUI_OK:self._j({"ok":False,"error":"pyautogui not installed"});return
+            stop_flag.set();time.sleep(0.15)
+            cfg=data.get("cfg",{})
+            for k,v in [("base_iki",238),("iki_sd",111),("error_rate",.012),("corr_chance",.80),("corr_range",3),("pause_after_word",85),("pause_after_punct",300),("use_burst",True),("use_familiarity",True)]:cfg.setdefault(k,v)
+            threading.Thread(target=do_type,args=(data["text"],cfg),daemon=True).start();self._j({"ok":True})
+        elif self.path=="/stop":stop_flag.set();pause_flag.set();self._j({"ok":True})
+        elif self.path=="/pause":pause_flag.clear();state["state"]="paused";self._j({"ok":True})
+        elif self.path=="/resume":pause_flag.set();state["state"]="typing" if state.get("state")=="paused" else state.get("state");self._j({"ok":True})
+        elif self.path=="/skip":skip_flag.set();self._j({"ok":True})
+        else:self.send_response(404);self.end_headers()
+    def _j(self,o):b=json.dumps(o).encode();self.send_response(200);self._cors();self.send_header("Content-Type","application/json");self.end_headers();self.wfile.write(b)
+def main():
+    srv=http.server.HTTPServer(("localhost",7700),H)
+    def shutdown(sig,frame):print("\\nShutting down...");stop_flag.set();pause_flag.set();threading.Thread(target=srv.shutdown,daemon=True).start();sys.exit(0)
+    signal.signal(signal.SIGINT,shutdown);signal.signal(signal.SIGTERM,shutdown)
+    print("="*50);print("  HumanTyper Pro — Server v3");print("  http://localhost:7700");print("  Ctrl+C to stop");print("="*50)
+    srv.serve_forever()
+if __name__=="__main__":main()
+`;}
+function dlRequirements(){const a=document.createElement('a');a.href='data:text/plain;charset=utf-8,'+encodeURIComponent('pyautogui>=0.9.54\n# Optional:\n# pynput>=1.7.6\n# numpy>=1.24\n');a.download='requirements.txt';a.click();}
+
+/* ════════════ SOUND ════════════ */
+let audioCtx;
+function playClick(){
+  try{if(!audioCtx)audioCtx=new AudioContext();const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.connect(g);g.connect(audioCtx.destination);o.frequency.value=640+Math.random()*360;g.gain.setValueAtTime(.02,audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+.05);o.start();o.stop(audioCtx.currentTime+.05);}catch(e){}
+}
+</script>
+</body>
+</html>
