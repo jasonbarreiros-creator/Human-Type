@@ -30,7 +30,7 @@ Features
 
 ## License
 
-MIT — free for personal and commercial use.
+Apache License 2.0 — see [LICENSE](LICENSE) file for details.
 
 ### Prerequisites
 - Python 3.9+
