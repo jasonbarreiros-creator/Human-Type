@@ -1,4 +1,4 @@
-Human-Type
+*Human-Type
 
 Realistic human-like typing automation — Simulates natural typing with variable speed, random typos, self-corrections, and a personal profile that learns from your sessions.
 
