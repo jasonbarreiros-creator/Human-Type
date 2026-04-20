@@ -14,6 +14,24 @@ Features
 
 ## Quick Start
 
+## Hotkeys
+
+| Key | Action |
+|-----|--------|
+| `Cmd+Enter` | Start typing |
+| `Esc` | Stop |
+| `P` | Pause / Resume |
+| `S` | Skip sentence |
+
+## Acknowledgements
+
+- **Human-like typing logic & adjacent-key typo system** — Inspired by [Auto-Type](https://github.com/GitLitAF/Auto-Type) by [GitLitAF](https://github.com/GitLitAF). Thank you for the foundational ideas!
+- **PyAutoGUI** — Keyboard/mouse automation
+
+## License
+
+MIT — free for personal and commercial use.
+
 ### Prerequisites
 - Python 3.9+
 - Chrome browser
